@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .chat-box {
+            overflow-y: scroll;
+            max-height: 300px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message .user {
+            font-weight: bold;
+        }
+        .message .time {
+            color: #888;
+            font-size: 0.8em;
+        }
+        .input-box {
+            display: flex;
+        }
+        .input-box input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .input-box button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to the Chat Room</h2>
+        <div id="chatBox" class="chat-box">
+            <!-- Chat messages will be displayed here -->
+        </div>
+        <div class="input-box">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Retrieve username from session storage
+        const username = sessionStorage.getItem('username');
+        if (!username) {
+            // If username is not found, redirect to user info page
+            window.location.href = 'userinfo.html';
+        }
+
+        // Establish WebSocket connection
+        const socket = new WebSocket('ws://localhost:3000/ws');
+
+        // Connection opened
+        socket.addEventListener('open', function (event) {
+            console.log('Connected to WebSocket server');
+            // Send username to server upon connection
+            socket.send(JSON.stringify({ type: 'username', username }));
+        });
+
+        // Listen for messages
+        socket.addEventListener('message', function (event) {
+            console.log('Message from server', event.data);
+            const message = JSON.parse(event.data);
+            appendMessage(message.user, message.message);
+        });
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            if (message !== '') {
+                const data = { user: username, message };
+                socket.send(JSON.stringify(data));
+                messageInput.value = '';
+            }
+        }
+
+        function appendMessage(user, message) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            const userSpan = document.createElement('span');
+            userSpan.classList.add('user');
+            userSpan.textContent = user;
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            const timeSpan = document.createElement('span');
+            timeSpan.classList.add('time');
+            timeSpan.textContent = getCurrentTime();
+            messageDiv.appendChild(userSpan);
+            messageDiv.appendChild(document.createTextNode(': '));
+            messageDiv.appendChild(messageSpan);
+            messageDiv.appendChild(document.createElement('br'));
+            messageDiv.appendChild(timeSpan);
+            chatBox.appendChild(messageDiv);
+            // Scroll to bottom
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            const timeString = hours + ':' + minutes + ' ' + ampm;
+            return timeString;
+        }
+    </script>
+</body>
+</html>
